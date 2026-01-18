@@ -581,12 +581,9 @@ class WebSim(Simulator):
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
 
-                try:
-                    loop.run_until_complete(self.broadcast_state())
-                except Exception as e:
-                    logging.warning(f"Websim tick error: {e}")
-                    loop = asyncio.get_event_loop()
-                    loop.create_task(self.broadcast_state())
+                # Use run_coroutine_threadsafe to safely schedule the coroutine
+                # This works even if the event loop is already running (e.g. in Docker)
+                asyncio.run_coroutine_threadsafe(self.broadcast_state(), loop)
 
             except Exception as e:
                 logging.error(f"Error in tick: {e}")
