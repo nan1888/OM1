@@ -10,6 +10,32 @@ from typing import Any, Dict, List
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
+def check_dependencies():
+        """Check if required dependencies are available.
+
+            Raises
+                ------
+                    SystemExit
+                            If required dependencies are missing.
+                                """
+        try:
+                    import json5  # noqa: F401
+except ImportError:
+        logging.error("Missing required dependency: json5")
+        logging.error("")
+        logging.error("This script requires dependencies from pyproject.toml.")
+        logging.error("Please run using one of the following methods:")
+        logging.error("")
+        logging.error("  1. Using uv (recommended):")
+        logging.error("     uv run python scripts/generate_schema.py")
+        logging.error("")
+        logging.error("  2. Install dependencies manually:")
+        logging.error("     pip install json5")
+        logging.error("")
+        sys.exit(1)
+
+
+
 class ConfigSchemaGenerator:
     """Scans OM1 codebase and generates configuration schema."""
 
@@ -623,7 +649,9 @@ class ConfigSchemaGenerator:
 def main():
     """
     Main entry point for schema generation script.
+    
     """
+        check_dependencies()
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(script_dir)
 
