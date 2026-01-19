@@ -87,10 +87,27 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         self._last_enroll_attempt: float = 0.0
         self._has_ever_tracked: bool = False
 
+        # Reusable HTTP session for polling (avoids creating a new session on every poll)
+        self._session: Optional[aiohttp.ClientSession] = None
+
         logging.info(
             f"PersonFollowingStatus initialized, polling {self.status_url} "
             f"every {self.poll_interval}s, re-enroll every {self.enroll_retry_interval}s when not tracking"
         )
+
+    async def _ensure_session(self) -> aiohttp.ClientSession:
+        """
+        Ensure ClientSession is created and return it.
+
+        Returns
+        -------
+        aiohttp.ClientSession
+            The reusable HTTP session.
+        """
+        if self._session is None or self._session.closed:
+            self._session = aiohttp.ClientSession()
+            logging.debug("PersonFollowingStatus: Created new ClientSession")
+        return self._session
 
     async def _poll(self) -> Optional[str]:
         """
@@ -107,40 +124,40 @@ class PersonFollowingStatus(FuserInput[PersonFollowingStatusConfig, Optional[str
         await asyncio.sleep(self.poll_interval)
 
         try:
-            async with aiohttp.ClientSession() as session:
-                # First, get current status
-                async with session.get(
-                    self.status_url,
-                    timeout=aiohttp.ClientTimeout(total=2),
-                ) as response:
-                    if response.status != 200:
-                        return None
+            session = await self._ensure_session()
+            # First, get current status
+            async with session.get(
+                self.status_url,
+                timeout=aiohttp.ClientTimeout(total=2),
+            ) as response:
+                if response.status != 200:
+                    return None
 
-                    data = await response.json()
-                    is_tracked = data.get("is_tracked", False)
-                    status = data.get("status", "UNKNOWN")
-                    target_track_id = data.get("target_track_id")
+                data = await response.json()
+                is_tracked = data.get("is_tracked", False)
+                status = data.get("status", "UNKNOWN")
+                target_track_id = data.get("target_track_id")
 
-                    # If tracking, remember we've successfully tracked
-                    if is_tracked:
-                        self._has_ever_tracked = True
+                # If tracking, remember we've successfully tracked
+                if is_tracked:
+                    self._has_ever_tracked = True
 
-                    # Only retry enrollment if INACTIVE (no one enrolled yet)
-                    # Do NOT re-enroll if SEARCHING (person enrolled but temporarily out of frame)
-                    if status == "INACTIVE" and target_track_id is None:
-                        current_time = time.time()
-                        time_since_last_enroll = (
-                            current_time - self._last_enroll_attempt
+                # Only retry enrollment if INACTIVE (no one enrolled yet)
+                # Do NOT re-enroll if SEARCHING (person enrolled but temporarily out of frame)
+                if status == "INACTIVE" and target_track_id is None:
+                    current_time = time.time()
+                    time_since_last_enroll = (
+                        current_time - self._last_enroll_attempt
+                    )
+
+                    if time_since_last_enroll >= self.enroll_retry_interval:
+                        self._last_enroll_attempt = current_time
+                        logging.info(
+                            "PersonFollowingStatus: Status INACTIVE, attempting enrollment"
                         )
+                        await self._try_enroll(session)
 
-                        if time_since_last_enroll >= self.enroll_retry_interval:
-                            self._last_enroll_attempt = current_time
-                            logging.info(
-                                "PersonFollowingStatus: Status INACTIVE, attempting enrollment"
-                            )
-                            await self._try_enroll(session)
-
-                    return self._format_status(data)
+                return self._format_status(data)
 
         except aiohttp.ClientError as e:
             logging.debug(f"PersonFollowingStatus: Poll failed: {e}")
@@ -307,3 +324,14 @@ INPUT: {self.descriptor_for_LLM}
         )
         self.messages.clear()
         return result
+
+    async def cleanup(self) -> None:
+        """
+        Clean up resources when shutting down.
+
+        Closes the HTTP session to avoid resource leaks.
+        """
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+            logging.info("PersonFollowingStatus: Closed ClientSession")
+            self._session = None
