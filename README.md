@@ -54,12 +54,23 @@ sudo apt-get install portaudio19-dev python-dev ffmpeg
 
 Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it to `config/spot.json5`, replacing the `openmind_free` placeholder. Or, `cp env.example .env` and add your key to the `.env`.
 
+### macOS Camera Permissions (Important!)
+
+If you're on macOS, you may need to grant camera access to your terminal or Python before running Spot:
+
+1. Go to **System Settings** → **Privacy & Security** → **Camera**
+2. Enable camera access for **Terminal** (or **iTerm**, if using that)
+3. Alternatively, enable it for **Python** if it appears in the list
+
+Without this permission, Spot will run but won't receive camera input.
+
 ### Launching OM1
 
 Run
 ```bash
 uv run src/run.py spot
 ```
+
 
 After launching OM1, the Spot agent will interact with you and perform (simulated) actions. For more help connecting OM1 to your robot hardware, see [getting started](https://docs.openmind.org/developing/1_get-started).
 

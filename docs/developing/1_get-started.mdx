@@ -111,6 +111,15 @@ Note: Using the placeholder key **openmind_free** will generate errors.
 OM_API_KEY=om1_live_...
 ```
 
+<Note>
+**macOS Users**: Before running Spot, grant camera permissions to your terminal:
+
+- Go to **System Settings** → **Privacy & Security** → **Camera**
+- Enable access for **Terminal** (or **iTerm**/other terminal apps)
+- Without this, Spot will run but won't receive camera input
+
+</Note>
+
 3. Run the Spot Agent
 
 Run the following command to start the Spot Agent:
@@ -118,6 +127,7 @@ Run the following command to start the Spot Agent:
 ```bash
 uv run src/run.py spot
 ```
+
 
 **Note**: Agent configuration names are only required when switching between different agents. Once an agent has been run, it becomes the default for subsequent executions.
 
