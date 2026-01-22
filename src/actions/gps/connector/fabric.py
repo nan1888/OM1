@@ -73,9 +73,12 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
         logging.info(f"GPSFabricConnector: Longitude: {longitude}")
         logging.info(f"GPSFabricConnector: Yaw: {yaw}")
 
-        if latitude is None and longitude is None and yaw is None:
-            # If no coordinates are available, log an error and return
-            logging.error("GPSFabricConnector: Coordinates not available.")
+        # Fix 1: Proper coordinate validation (OR instead of AND)
+        if latitude is None or longitude is None or yaw is None:
+            logging.error(
+                f"GPSFabricConnector: Invalid coordinates - "
+                f"lat={latitude}, lon={longitude}, yaw={yaw}"
+            )
             return None
 
         try:
@@ -92,11 +95,46 @@ class GPSFabricConnector(ActionConnector[GPSFabricConfig, GPSInput]):
                 headers={"Content-Type": "application/json"},
                 timeout=10,
             )
+
+            # Fix 3: Verify HTTP status code
+            share_status_response.raise_for_status()
+
+            # Parse JSON response
             response = share_status_response.json()
+
+            # Fix 4: Validate JSON-RPC error field
+            if "error" in response:
+                logging.error(
+                    f"GPSFabricConnector: JSON-RPC error - {response['error']}"
+                )
+                return None
+
+            # Check for successful result
             if "result" in response and response["result"]:
                 logging.info("GPSFabricConnector: Coordinates shared successfully.")
+                return None  # Fix 2: Explicit return on success
             else:
-                logging.error("GPSFabricConnector: Failed to share coordinates.")
+                logging.error(
+                    "GPSFabricConnector: Failed to share coordinates - "
+                    "no valid result in response."
+                )
                 return None
-        except requests.RequestException as e:
-            logging.error(f"GPSFabricConnector: Error sending coordinates: {e}")
+
+        except requests.exceptions.Timeout:
+            logging.error(
+                "GPSFabricConnector: Request timeout when sending coordinates."
+            )
+            return None
+        except requests.exceptions.HTTPError as e:
+            logging.error(f"GPSFabricConnector: HTTP error - {e}")
+            return None
+        except requests.exceptions.RequestException as e:
+            logging.error(f"GPSFabricConnector: Network error - {e}")
+            return None
+        except ValueError as e:
+            # JSON decode error
+            logging.error(f"GPSFabricConnector: Invalid JSON response - {e}")
+            return None
+        except Exception as e:
+            logging.error(f"GPSFabricConnector: Unexpected error - {e}")
+            return None
