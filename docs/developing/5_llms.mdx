@@ -39,6 +39,119 @@ return parsed_response
 
 The standard `pydantic` output model is defined in `src/llm/output_model.py`.
 
+### Using the Chat Completions API
+
+The single-agent chat completions endpoint allows you to send requests directly to various LLM providers through a unified API.
+
+#### API Endpoint Format
+
+```
+POST https://api.openmind.org/api/core/{provider}/chat/completions
+```
+
+Replace `{provider}` with one of the supported providers: `openai`, `gemini`, `xai`, `deepseek`, `near-ai`, or `openrouter`.
+
+#### Authentication
+
+All API requests require authentication using your OM1 API key in the `Authorization` header:
+
+```bash
+Authorization: Bearer YOUR_API_KEY
+```
+
+You can obtain your API key from the [OM1 Portal](https://portal.openmind.org/).
+
+#### Complete cURL Example
+
+```bash
+curl -X POST "https://api.openmind.org/api/core/openai/chat/completions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello, how are you?"
+      }
+    ]
+  }'
+```
+
+#### Request Format
+
+The request body must follow the OpenAI chat completions format:
+
+```json
+{
+  "model": "model_name",
+  "messages": [
+    {
+      "role": "system|user|assistant",
+      "content": "message content"
+    }
+  ],
+  "temperature": 0.7,        // Optional
+  "max_tokens": 1000,        // Optional
+  "stream": false            // Optional
+}
+```
+
+**Important:** Use the `messages` array format (not a simple `prompt` string). Each message object must have a `role` and `content` field.
+
+#### Provider and Model Reference
+
+| Provider | Models | Example |
+|----------|--------|---------|
+| **openai** | `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-5`, `gpt-5-mini`, `gpt-5-nano` | `gpt-4o-mini` |
+| **deepseek** | `deepseek-chat` | `deepseek-chat` |
+| **gemini** | `gemini-2.0-flash-exp`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro` | `gemini-2.0-flash-exp` |
+| **xai** | `grok-2-latest`, `grok-3-beta`, `grok-4-latest`, `grok-4` | `grok-2-latest` |
+| **near-ai** | `qwen3-30b-a3b-instruct-2507`, `qwen2.5-vl-72b-instruct`, `qwen-2.5-7b-instruct` | `qwen3-30b-a3b-instruct-2507` |
+| **openrouter** | `meta-llama/llama-3.1-70b-instruct`, `meta-llama/llama-3.3-70b-instruct` | `meta-llama/llama-3.1-70b-instruct` |
+
+**Example with Gemini:**
+
+```bash
+curl -X POST "https://api.openmind.org/api/core/gemini/chat/completions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemini-2.0-flash-exp",
+    "messages": [{"role": "user", "content": "Explain quantum computing"}]
+  }'
+```
+
+**Example with DeepSeek:**
+
+```bash
+curl -X POST "https://api.openmind.org/api/core/deepseek/chat/completions" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-chat",
+    "messages": [{"role": "user", "content": "Write a Python function"}]
+  }'
+```
+
+#### Common Issues and Solutions
+
+**404 Error - Endpoint Not Found**
+- ✗ Incorrect: `https://api.openmind.org/v1/chat`
+- ✓ Correct: `https://api.openmind.org/api/core/{provider}/chat/completions`
+
+**401 Error - Malformed API Key**
+- Ensure you're using the correct header format: `Authorization: Bearer YOUR_API_KEY`
+- Verify your API key is active at [portal.openmind.org](https://portal.openmind.org/)
+
+**Model Not Found**
+- Check that the model is supported by the specific provider (see table above)
+- Ensure the model name is spelled correctly
+
+**Invalid Request Body**
+- Use `messages` array format, not a `prompt` string
+- Each message must have both `role` and `content` fields
+
 ### Single-Agent LLM Configuration
 
 ```bash
