@@ -277,12 +277,12 @@ class ActionOrchestrator:
         elif at == "turn right" and av == "":
             action.type = "move"
             action.value = "turn right"
-        elif at == "move forwards" and av == "":
+        elif at == "move forward" and av == "":
             action.type = "move"
-            action.value = "move forwards"
-        elif at == "move back" and av == "":
+            action.value = "move forward"
+        elif at == "move backward" and av == "":
             action.type = "move"
-            action.value = "move back"
+            action.value = "move backward"
         return action
 
     def _get_agent_action(self, action: Action) -> T.Optional[AgentAction]:
