@@ -73,7 +73,7 @@ You can stream your video to our remote server using your **OM API Key**:
 
 ```bash
 ffmpeg -f avfoundation -video_size 1920x1080 -framerate 30 -i "0:0" \
-  -vcodec libx264 -preset ultrafast -tune zerolatency -f flv \
+  -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -tune zerolatency -f flv \
   "rtmp://api-video-ingest.openmind.org:1935/<OM_API_KEY_ID>?api_key=<OM_API_KEY>"
 ```
 
