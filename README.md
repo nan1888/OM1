@@ -56,6 +56,8 @@ Obtain your API Key at [OpenMind Portal](https://portal.openmind.org/). Copy it 
 
 ### Launching OM1
 
+**macOS Users**: If you're on macOS Sequoia or later, you must grant camera permissions to your terminal application (e.g., Terminal.app, iTerm2) or the Python executable before running OM1. Navigate to `System Settings → Privacy & Security → Camera` and ensure your terminal is toggled ON. Without this permission, agents using webcam input (like Spot) will fail silently with no video feed.
+
 Run
 ```bash
 uv run src/run.py spot
