@@ -142,6 +142,11 @@ def load_config(
                 f"Failed to parse configuration file '{config_path}': {e}"
             ) from e
 
+    # Interpolate environment variables in config
+    from utils.config_interpolation import interpolate_env_vars
+
+    raw_config = interpolate_env_vars(raw_config)
+
     config_version = raw_config.get("version")
     verify_runtime_version(config_version, config_name)
     validate_config_schema(raw_config)

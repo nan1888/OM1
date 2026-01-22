@@ -101,6 +101,11 @@ def start(
         with open(config_path, "r") as f:
             raw_config = json5.load(f)
 
+        # Interpolate environment variables
+        from utils.config_interpolation import interpolate_env_vars
+
+        raw_config = interpolate_env_vars(raw_config)
+
         if "modes" in raw_config and "default_mode" in raw_config:
             mode_config = load_mode_config(config_name)
             runtime = ModeCortexRuntime(
