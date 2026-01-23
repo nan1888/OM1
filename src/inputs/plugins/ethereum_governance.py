@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import aiohttp
+from web3 import Web3
 
 from inputs.base import Message, SensorConfig
 from inputs.base.loop import FuserInput
@@ -87,7 +88,7 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
 
     def decode_eth_response(self, hex_response: str) -> Optional[str]:
         """
-        Decodes an Ethereum eth_call response.
+        Decodes an Ethereum eth_call response using web3.py.
 
         Parameters
         ----------
@@ -99,22 +100,13 @@ class GovernanceEthereum(FuserInput[SensorConfig, Optional[str]]):
         Optional[str]
             Decoded string, or None on error.
         """
-        if hex_response.startswith("0x"):
-            hex_response = hex_response[2:]
-
         try:
-            response_bytes = bytes.fromhex(hex_response)
-
-            # Read offsets and string length
-            # offset = int.from_bytes(response_bytes[:32], "big")
-            string_length = int.from_bytes(response_bytes[96:128], "big")
-
-            # Extract and decode string
-            string_bytes = response_bytes[128 : 128 + string_length]
-            decoded_string = string_bytes.decode("utf-8")
+            # Use web3.py's robust ABI decoder instead of manual parsing
+            # This handles offsets, lengths, and edge cases automatically
+            decoded = Web3.to_text(hexstr=hex_response)
 
             # Remove unexpected control characters (like \x19)
-            cleaned_string = "".join(ch for ch in decoded_string if ch.isprintable())
+            cleaned_string = "".join(ch for ch in decoded if ch.isprintable())
 
             return cleaned_string
 
