@@ -71,6 +71,9 @@ class RFmapper(Background[RFmapperConfig]):
         self.thread = threading.Thread(target=self._scan_task)
         self.running = False
 
+        # Thread safety: Lock to protect shared variables
+        self.scan_lock = threading.Lock()
+
         self.scan_results: List[RFData] = []
         self.scan_idx = 0
         self.scan_last_sent = 0
@@ -217,8 +220,6 @@ class RFmapper(Background[RFmapperConfig]):
                 final_list.append(device)
         logging.debug(f"Scan...{final_list}")
 
-        self.scan_idx += 1
-
         return final_list
 
     def _scan_task(self):
@@ -229,9 +230,15 @@ class RFmapper(Background[RFmapperConfig]):
         logging.info("Starting RF scan thread...")
         self.running = True
         while self.running:
-            self.scan_results = self.loop.run_until_complete(self.scan())
-            logging.info(f"RF scan index: {self.scan_idx}")
-            logging.info(f"RF scan last sent: {self.scan_last_sent}")
+            results = self.loop.run_until_complete(self.scan())
+
+            # Thread safety: Protect shared variables with lock
+            with self.scan_lock:
+                self.scan_results = results
+                self.scan_idx += 1
+                logging.info(f"RF scan index: {self.scan_idx}")
+                logging.info(f"RF scan last sent: {self.scan_last_sent}")
+
             time.sleep(0.5)
 
     def start(self):
@@ -259,14 +266,19 @@ class RFmapper(Background[RFmapperConfig]):
                 logging.info(f"Sending to fabric: payload {self.payload_idx}")
 
                 # add scan results if they are new
-                logging.info(f"RF scan index: {self.scan_idx}")
-                logging.info(f"RF scan last sent: {self.scan_last_sent}")
+                # Thread safety: Protect shared variables with lock
                 fresh_scan_results = []
-                if self.scan_results and self.scan_idx > self.scan_last_sent:
-                    fresh_scan_results = self.scan_results
-                    self.scan_last_sent = self.scan_idx
-                    self.scan_results = []
-                    logging.info(f"RF scan sending new payload: {self.scan_last_sent}")
+                with self.scan_lock:
+                    logging.info(f"RF scan index: {self.scan_idx}")
+                    logging.info(f"RF scan last sent: {self.scan_last_sent}")
+
+                    if self.scan_results and self.scan_idx > self.scan_last_sent:
+                        fresh_scan_results = self.scan_results
+                        self.scan_last_sent = self.scan_idx
+                        self.scan_results = []
+                        logging.info(
+                            f"RF scan sending new payload: {self.scan_last_sent}"
+                        )
 
                 # basic gps data and occasional scan results
                 try:
